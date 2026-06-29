@@ -1,0 +1,17 @@
+[Unit]
+Description=AurinkoOptimo API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/aurinko-optimo
+EnvironmentFile=/opt/aurinko-optimo/.env
+ExecStart=/opt/aurinko-optimo/.venv/bin/aurinko-api
+Restart=always
+RestartSec=10
+User=aurinko
+Group=aurinko
+
+[Install]
+WantedBy=multi-user.target

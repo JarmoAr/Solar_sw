@@ -1,0 +1,40 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Personal or project-sensitive documents
+*.docx
+*.pptx
+*.xlsx
+*.pdf
+*.odt
+*.ods
+*.odp
+
+# Runtime data
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

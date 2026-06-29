@@ -1,0 +1,12 @@
+[Unit]
+Description=AurinkoOptimo collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/aurinko-optimo
+EnvironmentFile=/opt/aurinko-optimo/.env
+ExecStart=/opt/aurinko-optimo/.venv/bin/aurinko-collect
+User=aurinko
+Group=aurinko
