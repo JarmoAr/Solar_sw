@@ -2,7 +2,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from aurinko_optimo.models import ControlDecision, PowerFlow
+from aurinko_optimo.models import ControlDecision, ControlSettings, PowerFlow
 
 
 class Storage:
@@ -42,6 +42,50 @@ class Storage:
                 )
                 """
             )
+            self._initialize_control_settings(conn)
+
+    def _initialize_control_settings(self, conn: sqlite3.Connection) -> None:
+        existing_columns = {
+            row[1]
+            for row in conn.execute("PRAGMA table_info(control_settings)").fetchall()
+        }
+        if existing_columns and "sales_margin_cents_kwh" not in existing_columns:
+            row = conn.execute(
+                """
+                SELECT sales_margin_eur_mwh, limit_when_net_price_below_eur_mwh,
+                       limited_export_percent, max_export_w
+                FROM control_settings
+                WHERE id = 1
+                """
+            ).fetchone()
+            conn.execute("DROP TABLE control_settings")
+            self._create_control_settings_table(conn)
+            if row:
+                conn.execute(
+                    """
+                    INSERT INTO control_settings (
+                        id, sales_margin_cents_kwh, limit_when_net_price_below_cents_kwh,
+                        limited_export_percent, max_export_w
+                    ) VALUES (1, ?, ?, ?, ?)
+                    """,
+                    (row[0] / 10, row[1] / 10, row[2], row[3]),
+                )
+            return
+
+        self._create_control_settings_table(conn)
+
+    def _create_control_settings_table(self, conn: sqlite3.Connection) -> None:
+        conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS control_settings (
+                    id INTEGER PRIMARY KEY CHECK (id = 1),
+                    sales_margin_cents_kwh REAL NOT NULL,
+                    limit_when_net_price_below_cents_kwh REAL NOT NULL,
+                    limited_export_percent REAL NOT NULL,
+                    max_export_w INTEGER NOT NULL
+                )
+                """
+        )
 
     def save_measurement(self, measurement: PowerFlow) -> None:
         with self._connect() as conn:
@@ -104,3 +148,38 @@ class Storage:
                 """
             ).fetchone()
         return dict(row) if row else None
+
+    def get_control_settings(self, defaults: ControlSettings) -> ControlSettings:
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                """
+                SELECT sales_margin_cents_kwh, limit_when_net_price_below_cents_kwh,
+                       limited_export_percent, max_export_w
+                FROM control_settings
+                WHERE id = 1
+                """
+            ).fetchone()
+        return ControlSettings(**dict(row)) if row else defaults
+
+    def save_control_settings(self, control_settings: ControlSettings) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO control_settings (
+                    id, sales_margin_cents_kwh, limit_when_net_price_below_cents_kwh,
+                    limited_export_percent, max_export_w
+                ) VALUES (1, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    sales_margin_cents_kwh = excluded.sales_margin_cents_kwh,
+                    limit_when_net_price_below_cents_kwh = excluded.limit_when_net_price_below_cents_kwh,
+                    limited_export_percent = excluded.limited_export_percent,
+                    max_export_w = excluded.max_export_w
+                """,
+                (
+                    control_settings.sales_margin_cents_kwh,
+                    control_settings.limit_when_net_price_below_cents_kwh,
+                    control_settings.limited_export_percent,
+                    control_settings.max_export_w,
+                ),
+            )

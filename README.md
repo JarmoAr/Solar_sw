@@ -29,7 +29,10 @@ Create `.env`:
 FRONIUS_BASE_URL=http://192.0.2.50
 DATABASE_PATH=./data/aurinko.db
 CONTROL_MODE=simulate
-NEGATIVE_PRICE_LIMIT_EUR_MWH=0
+SALES_MARGIN_CENTS_KWH=0.35
+LIMIT_WHEN_NET_PRICE_BELOW_CENTS_KWH=0
+LIMITED_EXPORT_PERCENT=0
+MAX_EXPORT_W=10000
 ```
 
 ## Run locally
@@ -49,9 +52,27 @@ aurinko-api
 
 Open:
 
+- `http://127.0.0.1:8000/`
 - `http://127.0.0.1:8000/health`
 - `http://127.0.0.1:8000/api/latest`
 - `http://127.0.0.1:8000/api/decision`
+
+The web app at `/` lets the user configure:
+
+- electricity company sales margin, snt/kWh
+- the net export price where limiting starts
+- allowed export during limiting, for example `0 %` or `5 %`
+- maximum export power in watts
+
+Consumer and small-production electricity services usually show prices as `snt/kWh`, so the application uses `snt/kWh` in settings and UI. Some market APIs use `EUR/MWh`; those values are converted internally.
+
+The decision uses:
+
+```text
+net export price (snt/kWh) = spot price (snt/kWh) - sales margin (snt/kWh)
+```
+
+If the net export price is at or below the configured limit, export is limited to the configured percentage of `MAX_EXPORT_W`.
 
 To run a single collection manually:
 
@@ -64,10 +85,11 @@ If no real Fronius inverter is available at `FRONIUS_BASE_URL`, `/api/decision` 
 ## Project shape
 
 - `src/aurinko_optimo/fronius.py` reads local Fronius Solar API data.
-- `src/aurinko_optimo/prices.py` provides current price data. The current version supports a local CSV file and a fallback simulation price.
+- `src/aurinko_optimo/prices.py` provides current price data. CSV files can use `price_cents_kwh` or `price_eur_mwh`.
 - `src/aurinko_optimo/optimizer.py` decides whether export should be allowed or limited.
 - `src/aurinko_optimo/storage.py` stores measurements and decisions in SQLite.
 - `src/aurinko_optimo/api.py` exposes a small HTTP API.
+- `http://127.0.0.1:8000/` exposes the configuration web app.
 
 ## Next steps
 

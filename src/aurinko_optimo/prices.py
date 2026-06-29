@@ -22,9 +22,13 @@ class CsvPriceProvider(PriceProvider):
                 timestamp = datetime.fromisoformat(row["timestamp"])
                 if timestamp.tzinfo is None:
                     timestamp = timestamp.astimezone()
+                if row.get("price_cents_kwh"):
+                    price_eur_mwh = float(row["price_cents_kwh"]) * 10
+                else:
+                    price_eur_mwh = float(row["price_eur_mwh"])
                 price = PricePoint(
                     timestamp=timestamp,
-                    price_eur_mwh=float(row["price_eur_mwh"]),
+                    price_eur_mwh=price_eur_mwh,
                     source=f"csv:{self.path.name}",
                 )
                 if timestamp <= now and (best is None or timestamp > best.timestamp):
